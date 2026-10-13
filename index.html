@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Pide comida y productos a domicilio en Kubo Delivery con seguimiento en tiempo real.">
+
+  <!-- PWA Theme Color -->
+  <meta name="theme-color" content="#8B5CF6">
+  <meta name="msapplication-TileColor" content="#8B5CF6">
+
+  <!-- iOS PWA Meta Tags & Icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kubo Delivery">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-512.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Kubo Delivery</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- PWA Installation & Web Notifications Interop Script -->
+  <script>
+    // 1. Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js')
+          .then(function(reg) {
+            console.log('✅ Kubo Service Worker registrado con éxito:', reg.scope);
+          })
+          .catch(function(err) {
+            console.warn('⚠️ Error al registrar Service Worker:', err);
+          });
+      });
+    }
+
+    // 2. Before Install Prompt Listener (Chrome / Android / Edge)
+    window.deferredInstallPrompt = null;
+    window.isAppInstalled = window.matchMedia('(display-mode: standalone)').matches ||
+                            window.navigator.standalone === true ||
+                            localStorage.getItem('kubo_pwa_installed') === 'true';
+
+    window.addEventListener('beforeinstallprompt', function(e) {
+      if (localStorage.getItem('kubo_pwa_installed') === 'true' || localStorage.getItem('kubo_pwa_dismissed') === 'true') {
+        return;
+      }
+      e.preventDefault();
+      window.deferredInstallPrompt = e;
+      window.dispatchEvent(new CustomEvent('kubo-pwa-installable'));
+      console.log('💡 Kubo PWA lista para instalarse.');
+    });
+
+    window.addEventListener('appinstalled', function() {
+      window.deferredInstallPrompt = null;
+      window.isAppInstalled = true;
+      try { localStorage.setItem('kubo_pwa_installed', 'true'); } catch(e){}
+      console.log('🎉 Kubo PWA instalada exitosamente.');
+    });
+
+    // Helper functions callable from Flutter
+    window.isPwaStandalone = function() {
+      return window.matchMedia('(display-mode: standalone)').matches ||
+             window.navigator.standalone === true ||
+             localStorage.getItem('kubo_pwa_installed') === 'true';
+    };
+
+    window.canPromptInstall = function() {
+      return window.deferredInstallPrompt !== null &&
+             localStorage.getItem('kubo_pwa_installed') !== 'true' &&
+             localStorage.getItem('kubo_pwa_dismissed') !== 'true';
+    };
+
+    window.isIosDevice = function() {
+      var userAgent = window.navigator.userAgent.toLowerCase();
+      return /iphone|ipad|ipod/.test(userAgent);
+    };
+
+    window.triggerPwaInstall = async function() {
+      if (window.deferredInstallPrompt) {
+        window.deferredInstallPrompt.prompt();
+        var choiceResult = await window.deferredInstallPrompt.userChoice;
+        window.deferredInstallPrompt = null;
+        if (choiceResult && choiceResult.outcome === 'accepted') {
+          window.isAppInstalled = true;
+          try { localStorage.setItem('kubo_pwa_installed', 'true'); } catch(e){}
+          return true;
+        }
+        return false;
+      }
+      return false;
+    };
+
+    // 3. Web Notification Helpers
+    window.getNotificationPermission = function() {
+      if (!('Notification' in window)) return 'unsupported';
+      return Notification.permission;
+    };
+
+    window.requestNotificationPermissionAsync = async function() {
+      if (!('Notification' in window)) return 'unsupported';
+      try {
+        var perm = await Notification.requestPermission();
+        return perm;
+      } catch (e) {
+        return 'denied';
+      }
+    };
+
+    window.showWebNotification = function(title, body, tag, url, icon) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') {
+        return false;
+      }
+
+      var notifOptions = {
+        body: body || '',
+        icon: icon || 'icons/Icon-192.png',
+        badge: 'icons/Icon-192.png',
+        tag: tag || 'kubo-order',
+        vibrate: [200, 100, 200],
+        renotify: true,
+        data: { url: url || '/' }
+      };
+
+      // Try via ServiceWorkerRegistration first (supports background/closing)
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'SHOW_NOTIFICATION',
+          title: title,
+          body: body,
+          tag: tag,
+          data: { url: url || '/' },
+          icon: icon || 'icons/Icon-192.png'
+        });
+        return true;
+      } else if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready.then(function(reg) {
+          reg.showNotification(title, notifOptions);
+        });
+        return true;
+      } else {
+        // Fallback to standard Notification API
+        try {
+          var n = new Notification(title, notifOptions);
+          n.onclick = function() {
+            window.focus();
+            if (url) window.location.href = url;
+            n.close();
+          };
+          return true;
+        } catch (e) {
+          console.warn('Notification error fallback:', e);
+          return false;
+        }
+      }
+    };
+  </script>
+</head>
+<body style="margin: 0; padding: 0; background-color: #FAFAFA;">
+  <style>
+    #kubo-preloader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #FFFFFF;
+      z-index: 999999;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      pointer-events: none;
+      animation: kubo-preloader-fade 0.35s ease 1.4s forwards;
+    }
+    .kubo-spinner {
+      width: 42px;
+      height: 42px;
+      border: 3.5px solid #EDE9FE;
+      border-top-color: #8B5CF6;
+      border-radius: 50%;
+      animation: kubo-spin 0.8s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
+    }
+    @keyframes kubo-spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes kubo-preloader-fade {
+      to { opacity: 0; visibility: hidden; }
+    }
+    .kubo-title {
+      margin-top: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #1E1B4B;
+      letter-spacing: -0.2px;
+    }
+  </style>
+  <div id="kubo-preloader">
+    <div class="kubo-spinner"></div>
+    <div class="kubo-title">Kubo Delivery</div>
+  </div>
+  <script>
+    function removeKuboPreloader() {
+      var p = document.getElementById('kubo-preloader');
+      if (p) {
+        p.style.opacity = '0';
+        p.style.pointerEvents = 'none';
+        setTimeout(function() {
+          if (p && p.parentNode) p.parentNode.removeChild(p);
+        }, 300);
+      }
+    }
+    window.addEventListener('flutter-first-frame', removeKuboPreloader);
+    window.removeKuboPreloader = removeKuboPreloader;
+
+    // Detect when Flutter view appears in DOM
+    var observer = new MutationObserver(function() {
+      if (document.querySelector('flutter-view, flt-glass-pane, flt-scene-host')) {
+        setTimeout(removeKuboPreloader, 100);
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(removeKuboPreloader, 2500);
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
