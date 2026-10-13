@@ -29,16 +29,23 @@
 
   <!-- PWA Installation & Web Notifications Interop Script -->
   <script>
-    // 1. Service Worker Registration
+    // 1. Service Worker Registration (deferred until browser idle)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('sw.js')
-          .then(function(reg) {
-            console.log('✅ Kubo Service Worker registrado con éxito:', reg.scope);
-          })
-          .catch(function(err) {
-            console.warn('⚠️ Error al registrar Service Worker:', err);
-          });
+        var registerSW = function() {
+          navigator.serviceWorker.register('sw.js')
+            .then(function(reg) {
+              console.log('✅ Kubo Service Worker registrado con éxito:', reg.scope);
+            })
+            .catch(function(err) {
+              console.warn('⚠️ Error al registrar Service Worker:', err);
+            });
+        };
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(registerSW, { timeout: 3000 });
+        } else {
+          setTimeout(registerSW, 1500);
+        }
       });
     }
 
