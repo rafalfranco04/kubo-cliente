@@ -39,6 +39,17 @@ _flutter.buildConfig = {"engineRevision":"ef0cd000916d64fa0c5d09cc809fa7ad244a57
 
 _flutter.loader.load({
   serviceWorkerSettings: {
-    serviceWorkerVersion: "2001879697"
+    serviceWorkerVersion: "3155156848"
+  },
+  config: {
+    canvasKitBaseUrl: "canvaskit/"
+  },
+  onEntrypointLoaded: async function(engineInitializer) {
+    let appRunner = await engineInitializer.initializeEngine({
+      canvasKitBaseUrl: "canvaskit/",
+      fontFallbackBaseUrl: "",
+      useColorEmoji: false
+    });
+    await appRunner.runApp();
   }
 });
