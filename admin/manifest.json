@@ -1,9 +1,9 @@
 {
-    "id": "/",
+    "id": "./",
     "name": "Kubo Admin",
     "short_name": "Kubo Admin",
-    "start_url": ".",
-    "scope": "/",
+    "start_url": "./",
+    "scope": "./",
     "display": "standalone",
     "background_color": "#8B5CF6",
     "theme_color": "#8B5CF6",

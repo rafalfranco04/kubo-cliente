@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/admin/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="KUBO - Panel de Administración Multiempresa">
+  <meta name="theme-color" content="#8B5CF6">
+
+  <!-- Mobile & PWA meta tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="KUBO Admin">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>KUBO Admin</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- OneSignal Web Push SDK for PWA Lock-screen Notifications -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    // Dynamically calculate app scope (e.g. '/admin/' when hosted under somoskubo.com/admin/)
+    function getKuboBaseScope() {
+      var baseEl = document.querySelector('base');
+      var baseHref = baseEl ? baseEl.getAttribute('href') : '';
+      if (baseHref && !baseHref.includes('FLUTTER_BASE_HREF')) {
+        return baseHref.endsWith('/') ? baseHref : baseHref + '/';
+      }
+      var path = window.location.pathname;
+      if (path.startsWith('/admin')) {
+        return '/admin/';
+      }
+      return '/';
+    }
+
+    var appScope = getKuboBaseScope();
+    var appSwPath = appScope + 'OneSignalSDKWorker.js';
+
+    // Initialize OneSignal Web SDK
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function(OneSignal) {
+      try {
+        await OneSignal.init({
+          appId: "90d40236-4d7a-4ec6-804d-e9c5f0f37089",
+          serviceWorkerParam: { scope: appScope },
+          serviceWorkerPath: appSwPath,
+          allowLocalhostAsSecureOrigin: true,
+        });
+        console.log('[OneSignal] Initialized successfully with scope:', appScope);
+
+        // Store subscription ID if available
+        if (OneSignal.User && OneSignal.User.pushSubscription && OneSignal.User.pushSubscription.id) {
+          localStorage.setItem('kubo_player_id', OneSignal.User.pushSubscription.id);
+        }
+      } catch (err) {
+        console.warn('[OneSignal] Init notice:', err);
+      }
+    });
+
+    // PWA Install Prompt Listener
+    window.deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      window.deferredPrompt = e;
+      window.dispatchEvent(new CustomEvent('pwa-installable'));
+    });
+
+    // PWA Helper Functions
+    window.isPwaInstalled = function() {
+      return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    };
+
+    window.isPwaInstallable = function() {
+      return window.deferredPrompt !== null;
+    };
+
+    window.promptPwaInstall = function() {
+      if (window.deferredPrompt) {
+        window.deferredPrompt.prompt();
+        return window.deferredPrompt.userChoice.then((choiceResult) => {
+          var accepted = choiceResult.outcome === 'accepted';
+          console.log('[PWA] User response to install prompt:', choiceResult.outcome);
+          window.deferredPrompt = null;
+          return accepted;
+        });
+      }
+      return Promise.resolve(false);
+    };
+
+    // Notification Helper Functions for Flutter Web
+    window.hasWebNotificationPermission = function() {
+      if ('Notification' in window) {
+        return Notification.permission === 'granted';
+      }
+      return false;
+    };
+
+    window.getWebPlayerId = function() {
+      if (window.OneSignal && window.OneSignal.User && window.OneSignal.User.pushSubscription) {
+        var id = window.OneSignal.User.pushSubscription.id;
+        if (id) {
+          localStorage.setItem('kubo_player_id', id);
+          return id;
+        }
+      }
+      return localStorage.getItem('kubo_player_id') || '';
+    };
+
+    window.requestWebNotificationPermission = async function() {
+      var granted = false;
+      try {
+        if ('Notification' in window) {
+          var perm = await Notification.requestPermission();
+          granted = (perm === 'granted');
+        }
+        if (window.OneSignal) {
+          try {
+            await window.OneSignal.Notifications.requestPermission();
+          } catch (_) {}
+          var id = window.OneSignal.User?.pushSubscription?.id;
+          if (id) {
+            localStorage.setItem('kubo_player_id', id);
+          }
+        }
+      } catch (e) {
+        console.error('[Notification] Error in request:', e);
+      }
+      return granted;
+    };
+
+    window.setWebBusiness = async function(businessId, userId) {
+      if (!window.OneSignal) return null;
+      try {
+        await window.OneSignal.login(businessId);
+        if (businessId) {
+          await window.OneSignal.User.addTag('business_id', businessId);
+        }
+        if (userId) {
+          await window.OneSignal.User.addTag('user_id', userId);
+        }
+        var pid = window.OneSignal.User?.pushSubscription?.id;
+        if (pid) {
+          localStorage.setItem('kubo_player_id', pid);
+        }
+        return pid || null;
+      } catch (e) {
+        console.error('[OneSignal] setWebBusiness error:', e);
+        return null;
+      }
+    };
+
+    window.clearWebBusiness = async function() {
+      if (!window.OneSignal) return;
+      try {
+        await window.OneSignal.logout();
+        await window.OneSignal.User.removeTag('business_id');
+        await window.OneSignal.User.removeTag('user_id');
+      } catch (e) {
+        console.error('[OneSignal] clearWebBusiness error:', e);
+      }
+    };
+  </script>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
