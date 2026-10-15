@@ -111,7 +111,19 @@
       if ('Notification' in window) {
         return Notification.permission === 'granted';
       }
+      if (window.OneSignal && window.OneSignal.Notifications) {
+        return window.OneSignal.Notifications.permission === true;
+      }
       return false;
+    };
+
+    window.getWebNotificationPermissionStatus = function() {
+      if (!('Notification' in window)) {
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) return 'ios_not_pwa';
+        return 'unsupported';
+      }
+      return Notification.permission; // 'granted', 'denied', or 'default'
     };
 
     window.getWebPlayerId = function() {
@@ -128,18 +140,30 @@
     window.requestWebNotificationPermission = async function() {
       var granted = false;
       try {
-        if ('Notification' in window) {
+        if (window.OneSignal && window.OneSignal.Notifications) {
+          try {
+            await window.OneSignal.Notifications.requestPermission();
+            if (window.OneSignal.Notifications.permission === true) {
+              granted = true;
+            }
+          } catch (err) {
+            console.warn('[OneSignal] requestPermission notice:', err);
+          }
+        }
+        if (!granted && 'Notification' in window) {
           var perm = await Notification.requestPermission();
           granted = (perm === 'granted');
         }
-        if (window.OneSignal) {
+        if (granted && window.OneSignal) {
           try {
-            await window.OneSignal.Notifications.requestPermission();
+            if (window.OneSignal.User && window.OneSignal.User.pushSubscription) {
+              await window.OneSignal.User.pushSubscription.optIn();
+              var id = window.OneSignal.User.pushSubscription.id;
+              if (id) {
+                localStorage.setItem('kubo_player_id', id);
+              }
+            }
           } catch (_) {}
-          var id = window.OneSignal.User?.pushSubscription?.id;
-          if (id) {
-            localStorage.setItem('kubo_player_id', id);
-          }
         }
       } catch (e) {
         console.error('[Notification] Error in request:', e);
