@@ -51,7 +51,7 @@ var $async$Qd=A.r(function(e,f){if(e===1)return A.n(f,w)
 while(true)switch(x){case 0:x=2
 return A.e(A.e8(),$async$Qd)
 case 2:v=f
-u=v.AJ("placed_orders")
+u=v.AK("placed_orders")
 if(u==null)u=A.a([],y.x)
 x=!B.c.p(u,d)?3:4
 break
@@ -95,9 +95,9 @@ v=v.bK$
 v.b=!0
 v.a.push(new C.aLE(t))
 t.d.bY(0)
-t.xA()},
-xA(){var x=0,w=A.q(y.v),v=1,u=[],t=this,s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,a0,a1,a2,a3,a4,a5
-var $async$xA=A.r(function(a6,a7){if(a6===1){u.push(a7)
+t.xB()},
+xB(){var x=0,w=A.q(y.v),v=1,u=[],t=this,s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,a0,a1,a2,a3,a4,a5
+var $async$xB=A.r(function(a6,a7){if(a6===1){u.push(a7)
 x=v}while(true)switch(x){case 0:v=3
 o=t.a.ax
 n=A.ab(o).i("aa<1,af<l,V?>>")
@@ -123,12 +123,12 @@ a2=n.as
 f=f?null:n.Q
 a3=n.cx
 x=6
-return A.e(o.eA(g,k,l.a,i,h,a2,f,j,a1,n.CW,s,e,a0,d,a3),$async$xA)
+return A.e(o.eA(g,k,l.a,i,h,a2,f,j,a1,n.CW,s,e,a0,d,a3),$async$xB)
 case 6:r=a7
 x=r!=null?7:9
 break
 case 7:x=10
-return A.e(C.Qd(r.a),$async$xA)
+return A.e(C.Qd(r.a),$async$xB)
 case 10:o=$.en
 if(o==null)o=$.en=A.kB()
 n=r.a
@@ -158,7 +158,7 @@ case 2:x=1
 break
 case 5:return A.o(null,w)
 case 1:return A.n(u.at(-1),w)}})
-return A.p($async$xA,w)},
+return A.p($async$xB,w)},
 To(){var x,w,v=this
 if(v.ax!=null&&v.c!=null&&!v.at){v.F(new C.aLu(v))
 try{x=v.c
@@ -338,4 +338,4 @@ D.afo=new A.j(!0,B.um,null,null,null,null,15,B.ag,null,null,null,null,1.3,null,n
 D.afK=new A.j(!0,B.bX,null,null,null,null,13,B.z,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
 D.aiJ=new A.R("Regresar",null,B.Ih,null,null,null,null,null,null)})()};
 ((a,b)=>{a[b]=a.current
-a.eventLog.push({p:"main.dart.js_1",e:"endPart",h:b})})($__dart_deferred_initializers__,"rvaQ0fDHDZSZzeFsHFmT3BZcnV4=");
+a.eventLog.push({p:"main.dart.js_1",e:"endPart",h:b})})($__dart_deferred_initializers__,"1a8WsdptS7kdr77YwHsQHuyrL6s=");

@@ -44,9 +44,7 @@ _flutter.loader.load({
   },
   onEntrypointLoaded: async function(engineInitializer) {
     let appRunner = await engineInitializer.initializeEngine({
-      canvasKitBaseUrl: "canvaskit/",
-      fontFallbackBaseUrl: "",
-      useColorEmoji: false
+      canvasKitBaseUrl: "canvaskit/"
     });
     await appRunner.runApp();
   }
