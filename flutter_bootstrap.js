@@ -42,5 +42,8 @@ _flutter.loader.load({
   onEntrypointLoaded: async function(engineInitializer) {
     let appRunner = await engineInitializer.initializeEngine();
     await appRunner.runApp();
+    if (window.dismissKuboShell) {
+      window.dismissKuboShell();
+    }
   }
 });

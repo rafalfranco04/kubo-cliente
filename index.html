@@ -196,6 +196,17 @@
         return false;
       }
 
+      // Deduplication Shield: Ensure every notification tag is displayed only once
+      if (tag) {
+        try {
+          var storageKey = 'kubo_sent_notif_' + tag;
+          if (localStorage.getItem(storageKey)) {
+            return false;
+          }
+          localStorage.setItem(storageKey, Date.now().toString());
+        } catch (e) {}
+      }
+
       window.playNotificationChime();
 
       var resolvedIcon = new URL(icon || 'icons/Icon-192.png', window.location.origin).href;
@@ -207,7 +218,7 @@
         badge: resolvedBadge,
         tag: tag || ('kubo-order-' + Date.now()),
         vibrate: [300, 150, 300, 150, 300], // Strong vibration for locked screen
-        renotify: true,
+        renotify: false,
         requireInteraction: true, // Crucial for lock screen persistence
         silent: false,
         data: { url: url || '/' }
@@ -248,7 +259,35 @@
     };
   </script>
 </head>
-<body style="margin: 0; padding: 0; background-color: #FAFAFA;">
+<body style="margin: 0; padding: 0; background-color: #FAFAFA; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <!-- Instant Pre-Flutter Brand Shell for Instant FCP & LCP (Removed smoothly once Flutter paints) -->
+  <div id="kubo-init-shell" style="position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: #FAFAFA; z-index: 99999; transition: opacity 0.3s ease; pointer-events: none;">
+    <div style="width: 100%; height: 58px; background: #FFFFFF; border-bottom: 1px solid #EDE9FE; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-sizing: border-box;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg, #8B5CF6, #6D28D9); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 17px;">K</div>
+        <span style="font-weight: 900; font-size: 18px; color: #1E1B4B; letter-spacing: -0.4px;">Kubo Delivery</span>
+      </div>
+      <div style="width: 100px; height: 26px; border-radius: 13px; background: #EDE9FE;"></div>
+    </div>
+    <div style="width: 100%; max-width: 680px; padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px;">
+      <div style="width: 100%; height: 140px; border-radius: 20px; background: #E2E8F0; opacity: 0.85;"></div>
+      <div style="display: flex; gap: 10px; overflow: hidden;">
+        <div style="width: 62px; height: 62px; border-radius: 16px; background: #E2E8F0; flex-shrink: 0;"></div>
+        <div style="width: 62px; height: 62px; border-radius: 16px; background: #E2E8F0; flex-shrink: 0;"></div>
+        <div style="width: 62px; height: 62px; border-radius: 16px; background: #E2E8F0; flex-shrink: 0;"></div>
+        <div style="width: 62px; height: 62px; border-radius: 16px; background: #E2E8F0; flex-shrink: 0;"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.dismissKuboShell = function() {
+      var shell = document.getElementById('kubo-init-shell');
+      if (shell) {
+        shell.style.opacity = '0';
+        setTimeout(function() { if (shell.parentNode) shell.parentNode.removeChild(shell); }, 350);
+      }
+    };
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

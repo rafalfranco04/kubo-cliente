@@ -49,19 +49,29 @@ function getAbsoluteUrl(path) {
   }
 }
 
-// 3. Fetch Event - Cache-first for compiled static assets, network-first with cache fallback for others
+// Track sent notification tags so none is ever repeated
+const sentNotificationTags = new Set();
+
+// 3. Fetch Event - Cache-first for compiled static assets & Supabase Storage images
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
-  if (url.includes('supabase.co') || url.includes('openstreetmap.org') || url.includes('yappy.cloud') || event.request.method !== 'GET') {
+
+  // Bypass non-GET or internal REST/Auth API calls
+  if (event.request.method !== 'GET' ||
+      url.includes('/rest/v1/') ||
+      url.includes('/auth/v1/') ||
+      url.includes('openstreetmap.org') ||
+      url.includes('yappy.cloud')) {
     return;
   }
 
-  // Fast cache-first for static immutable assets (Flutter JS, WASM, fonts, images)
+  // Fast cache-first for static immutable assets & Supabase Storage public images
+  const isSupabaseImage = url.includes('supabase.co/storage/v1/object/public/');
   const isStaticAsset = /\.(wasm|js|png|jpg|jpeg|svg|webp|woff2|otf|ttf)$/.test(url) &&
                         !url.includes('sw.js') &&
                         !url.includes('flutter_service_worker.js');
 
-  if (isStaticAsset) {
+  if (isStaticAsset || isSupabaseImage) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         if (cached) return cached;
@@ -233,10 +243,27 @@ async function checkBackgroundOrders() {
       const oldInfo = trackedOrders[order.id];
       if (!oldInfo) continue;
 
-      const notif = formatOrderStatusNotification(order, oldInfo);
       const newStatus = (order.status || '').toLowerCase().trim();
       const newPayment = (order.payment_status || '').toLowerCase().trim();
       const newDriver = (order.driver_name || order.repartidor || '').trim();
+
+      // If this order is already delivered or cancelled, clean it up immediately
+      if (newStatus === 'delivered' || newStatus === 'cancelled') {
+        delete trackedOrders[order.id];
+      }
+
+      // First run for this order: simply calibrate state without retrospective alert
+      if (!oldInfo.initialized) {
+        trackedOrders[order.id].lastStatus = newStatus;
+        trackedOrders[order.id].lastPaymentStatus = newPayment;
+        trackedOrders[order.id].lastDriverName = newDriver;
+        if (order.pickup_code) trackedOrders[order.id].pickupCode = order.pickup_code;
+        if (order.businesses && order.businesses.name) trackedOrders[order.id].businessName = order.businesses.name;
+        trackedOrders[order.id].initialized = true;
+        continue;
+      }
+
+      const notif = formatOrderStatusNotification(order, oldInfo);
 
       // Update in-memory state
       trackedOrders[order.id].lastStatus = newStatus;
@@ -245,7 +272,12 @@ async function checkBackgroundOrders() {
       if (order.pickup_code) trackedOrders[order.id].pickupCode = order.pickup_code;
       if (order.businesses && order.businesses.name) trackedOrders[order.id].businessName = order.businesses.name;
 
-      if (notif) {
+      if (notif && notif.tag) {
+        if (sentNotificationTags.has(notif.tag)) {
+          continue; // Block duplicate notification
+        }
+        sentNotificationTags.add(notif.tag);
+
         const fullIcon = getAbsoluteUrl('/icons/Icon-192.png');
         const fullBadge = getAbsoluteUrl('/icons/Icon-192.png');
         await self.registration.showNotification(notif.title, {
@@ -253,17 +285,12 @@ async function checkBackgroundOrders() {
           icon: fullIcon,
           badge: fullBadge,
           tag: notif.tag,
-          renotify: true,
-          requireInteraction: true, // Keep notification active on lock screen until user interacts
+          renotify: false,
+          requireInteraction: true,
           silent: false,
-          vibrate: [300, 150, 300, 150, 300], // Strong vibration for lock screen
+          vibrate: [300, 150, 300, 150, 300],
           data: { url: `/#/tracking?order_id=${order.id}` }
         });
-      }
-
-      // If order is completed or cancelled, stop tracking after notifying
-      if (newStatus === 'delivered' || newStatus === 'cancelled') {
-        delete trackedOrders[order.id];
       }
     }
   } catch (err) {
@@ -296,12 +323,16 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  const tag = data.tag || `kubo-push-${Date.now()}`;
+  if (sentNotificationTags.has(tag)) return;
+  sentNotificationTags.add(tag);
+
   const options = {
     body: data.body,
     icon: getAbsoluteUrl(data.icon || '/icons/Icon-192.png'),
     badge: getAbsoluteUrl(data.badge || '/icons/Icon-192.png'),
-    tag: data.tag || `kubo-order-${Date.now()}`,
-    renotify: true,
+    tag: tag,
+    renotify: false,
     requireInteraction: true,
     silent: false,
     vibrate: [300, 150, 300, 150, 300],
@@ -342,13 +373,17 @@ self.addEventListener('message', (event) => {
 
   if (event.data.type === 'SHOW_NOTIFICATION') {
     const info = event.data;
+    const tag = info.tag || `kubo-order-${Date.now()}`;
+    if (sentNotificationTags.has(tag)) return;
+    sentNotificationTags.add(tag);
+
     const options = {
       body: info.body || '',
       icon: getAbsoluteUrl(info.icon || '/icons/Icon-192.png'),
       badge: getAbsoluteUrl(info.badge || '/icons/Icon-192.png'),
-      tag: info.tag || `kubo-order-${Date.now()}`,
+      tag: tag,
       vibrate: [300, 150, 300, 150, 300],
-      renotify: true,
+      renotify: false,
       requireInteraction: true,
       silent: false,
       data: info.data || { url: '/' }
@@ -357,17 +392,21 @@ self.addEventListener('message', (event) => {
   } else if (event.data.type === 'TRACK_ORDER') {
     const { orderId, businessName, initialStatus, paymentStatus, driverName, isPickup, pickupCode } = event.data;
     if (orderId) {
+      const cleanStatus = (initialStatus || '').toLowerCase().trim();
+      // If already terminal, don't poll
+      if (cleanStatus === 'delivered' || cleanStatus === 'cancelled') {
+        return;
+      }
       trackedOrders[orderId] = {
         businessName: businessName || 'Kubo Delivery',
-        lastStatus: (initialStatus || '').toLowerCase().trim(),
+        lastStatus: cleanStatus,
         lastPaymentStatus: (paymentStatus || '').toLowerCase().trim(),
         lastDriverName: (driverName || '').trim(),
         isPickup: isPickup === true,
-        pickupCode: pickupCode || ''
+        pickupCode: pickupCode || '',
+        initialized: cleanStatus.length > 0
       };
       startBackgroundOrderPolling();
-      // Run immediate check
-      checkBackgroundOrders();
     }
   } else if (event.data.type === 'STOP_TRACK_ORDER') {
     if (event.data.orderId) {
