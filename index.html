@@ -38,6 +38,30 @@
 
   <!-- PWA Installation & Web Notifications Interop Script -->
   <script>
+    // 0. Cache Invalidation: Automatically purge outdated caches from previous chunked builds
+    (function() {
+      var CURRENT_CACHE_KEY = 'kubo_build_v5';
+      if (localStorage.getItem('kubo_cache_version') !== CURRENT_CACHE_KEY) {
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            names.forEach(function(name) {
+              if (name !== 'kubo-pwa-cache-v5') {
+                caches.delete(name);
+              }
+            });
+          });
+        }
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for (var r of regs) {
+              r.update();
+            }
+          });
+        }
+        try { localStorage.setItem('kubo_cache_version', CURRENT_CACHE_KEY); } catch(e){}
+      }
+    })();
+
     // 1. Service Worker Registration (deferred until browser idle)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
