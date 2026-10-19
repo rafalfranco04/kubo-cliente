@@ -42,8 +42,12 @@ _flutter.loader.load({
   onEntrypointLoaded: async function(engineInitializer) {
     let appRunner = await engineInitializer.initializeEngine();
     await appRunner.runApp();
-    if (window.dismissKuboShell) {
-      window.dismissKuboShell();
+    var spinner = document.getElementById('loading-spinner');
+    if (spinner) {
+      spinner.style.opacity = '0';
+      setTimeout(function() {
+        if (spinner.parentNode) spinner.parentNode.removeChild(spinner);
+      }, 250);
     }
   }
 });

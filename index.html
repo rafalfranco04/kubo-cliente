@@ -5,7 +5,7 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="description" content="Pide comida y productos a domicilio en Kubo Delivery con seguimiento en tiempo real.">
 
   <!-- PWA Theme Color -->
@@ -42,6 +42,15 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
         var registerSW = function() {
+          // Clean up any stale flutter_service_worker registrations
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for (var r of regs) {
+              if (r.active && r.active.scriptURL && r.active.scriptURL.includes('flutter_service_worker.js')) {
+                r.unregister();
+              }
+            }
+          }).catch(function(){});
+
           navigator.serviceWorker.register('sw.js')
             .then(function(reg) {
               console.log('✅ Kubo Service Worker registrado con éxito:', reg.scope);
@@ -260,34 +269,11 @@
   </script>
 </head>
 <body style="margin: 0; padding: 0; background-color: #FAFAFA; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <!-- Instant Pre-Flutter Brand Shell for Instant FCP & LCP (Removed smoothly once Flutter paints) -->
-  <div id="kubo-init-shell" style="position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: #FAFAFA; z-index: 99999; transition: opacity 0.3s ease; pointer-events: none;">
-    <div style="width: 100%; height: 58px; background: #FFFFFF; border-bottom: 1px solid #EDE9FE; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-sizing: border-box;">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <div style="width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg, #8B5CF6, #6D28D9); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 17px;">K</div>
-        <span style="font-weight: 900; font-size: 18px; color: #1E1B4B; letter-spacing: -0.4px;">Kubo Delivery</span>
-      </div>
-      <div style="width: 100px; height: 26px; border-radius: 13px; background: #EDE9FE;"></div>
-    </div>
-    <div style="width: 100%; max-width: 680px; padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px;">
-      <div style="width: 100%; height: 140px; border-radius: 20px; background: #E2E8F0; opacity: 0.85;"></div>
-      <div style="display: flex; gap: 10px; overflow: hidden;">
-        <div style="width: 62px; height: 62px; border-radius: 16px; background: #E2E8F0; flex-shrink: 0;"></div>
-        <div style="width: 62px; height: 62px; border-radius: 16px; background: #E2E8F0; flex-shrink: 0;"></div>
-        <div style="width: 62px; height: 62px; border-radius: 16px; background: #E2E8F0; flex-shrink: 0;"></div>
-        <div style="width: 62px; height: 62px; border-radius: 16px; background: #E2E8F0; flex-shrink: 0;"></div>
-      </div>
-    </div>
+  <!-- Lightweight Preloader (auto-removes as soon as Flutter renders) -->
+  <div id="loading-spinner" style="position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #FAFAFA; z-index: 9999; transition: opacity 0.25s ease; pointer-events: none;">
+    <div style="width: 36px; height: 36px; border: 3px solid #EDE9FE; border-top-color: #8B5CF6; border-radius: 50%; animation: kubo-spin 0.8s linear infinite;"></div>
+    <style>@keyframes kubo-spin { to { transform: rotate(360deg); } }</style>
   </div>
-  <script>
-    window.dismissKuboShell = function() {
-      var shell = document.getElementById('kubo-init-shell');
-      if (shell) {
-        shell.style.opacity = '0';
-        setTimeout(function() { if (shell.parentNode) shell.parentNode.removeChild(shell); }, 350);
-      }
-    };
-  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
