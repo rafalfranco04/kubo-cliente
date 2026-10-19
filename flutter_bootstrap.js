@@ -37,17 +37,39 @@ if (!window._flutter) {
 _flutter.buildConfig = {"engineRevision":"ef0cd000916d64fa0c5d09cc809fa7ad244a5767","builds":[{"compileTarget":"dart2js","renderer":"canvaskit","mainJsPath":"main.dart.js"}]};
 
 
+// 1. Bust cache for mainJsPath so Hostinger CDN and browser caches NEVER serve a stale main.dart.js
+if (_flutter && _flutter.buildConfig && _flutter.buildConfig.builds) {
+  var bVer = 'b_' + Date.now();
+  for (var i = 0; i < _flutter.buildConfig.builds.length; i++) {
+    var b = _flutter.buildConfig.builds[i];
+    if (b.mainJsPath) {
+      b.mainJsPath = b.mainJsPath.split('?')[0] + '?v=' + bVer;
+    }
+  }
+}
+
+// 2. Dismiss loading spinner safely with a hard timeout fallback so screen NEVER gets stuck
+function hideAppLoadingSpinner() {
+  var spinner = document.getElementById('loading-spinner');
+  if (spinner) {
+    spinner.style.opacity = '0';
+    setTimeout(function() {
+      if (spinner && spinner.parentNode) spinner.parentNode.removeChild(spinner);
+    }, 250);
+  }
+}
+
+// Hard fallback: even if Flutter initialization takes time, remove the spinner after max 3.5s
+setTimeout(hideAppLoadingSpinner, 3500);
+
 _flutter.loader.load({
   serviceWorkerSettings: null,
   onEntrypointLoaded: async function(engineInitializer) {
-    let appRunner = await engineInitializer.initializeEngine();
-    await appRunner.runApp();
-    var spinner = document.getElementById('loading-spinner');
-    if (spinner) {
-      spinner.style.opacity = '0';
-      setTimeout(function() {
-        if (spinner.parentNode) spinner.parentNode.removeChild(spinner);
-      }, 250);
+    try {
+      let appRunner = await engineInitializer.initializeEngine();
+      await appRunner.runApp();
+    } finally {
+      hideAppLoadingSpinner();
     }
   }
 });
