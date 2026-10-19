@@ -1,5 +1,4 @@
-// Kubo Delivery - Service Worker for PWA Installation & Push Notifications
-const CACHE_NAME = 'kubo-pwa-cache-v3';
+const CACHE_NAME = 'kubo-pwa-cache-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -52,13 +51,14 @@ function getAbsoluteUrl(path) {
 // Track sent notification tags so none is ever repeated
 const sentNotificationTags = new Set();
 
-// 3. Fetch Event - Intelligent Caching:
-// - Entrypoint scripts (main.dart.js, flutter_bootstrap.js, flutter.js, index.html) -> Network-first (always fresh from Hostinger)
-// - Immutable assets (canvaskit.wasm, *.part.js, images, fonts) -> Cache-first (ultra fast)
+// 3. Fetch Event - Bulletproof handling:
+// - Navigation requests: Network with /index.html fallback for SPA
+// - Static media & fonts: Cache-first
+// - Assets, manifests & scripts: Native browser fetch without SW interference
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
 
-  // Bypass non-GET or internal REST/Auth API calls
+  // Bypass non-GET or internal Supabase REST/Auth API calls
   if (event.request.method !== 'GET' ||
       url.includes('/rest/v1/') ||
       url.includes('/auth/v1/') ||
@@ -67,35 +67,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Entrypoint scripts that must always revalidate with the server to prevent stale code on Hostinger
-  const isEntrypoint = url.endsWith('/main.dart.js') ||
-                       url.endsWith('/flutter_bootstrap.js') ||
-                       url.endsWith('/flutter.js') ||
-                       url.endsWith('/index.html') ||
-                       url.endsWith('/') ||
-                       url.includes('/version.json');
-
-  if (isEntrypoint) {
+  // Navigation requests: Fallback to index.html if offline
+  if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
+        .catch(() => caches.match('/index.html'))
     );
     return;
   }
 
-  // Fast cache-first for immutable static assets (canvaskit.wasm, deferred *.part.js, images, fonts)
-  const isSupabaseImage = url.includes('supabase.co/storage/v1/object/public/');
-  const isImmutableAsset = /\.(wasm|png|jpg|jpeg|svg|webp|woff2|otf|ttf)$/.test(url) ||
-                          url.includes('.part.js');
+  // Static fonts & images: Fast cache-first
+  const isStaticMedia = /\.(wasm|png|jpg|jpeg|svg|webp|woff2|otf|ttf)$/.test(url) ||
+                        url.includes('supabase.co/storage/v1/object/public/');
 
-  if (isImmutableAsset || isSupabaseImage) {
+  if (isStaticMedia) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         if (cached) return cached;
@@ -111,24 +96,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response && response.status === 200 && event.request.mode === 'navigate') {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-        }
-        return response;
-      })
-      .catch(() => {
-        return caches.match(event.request).then((cached) => {
-          if (cached) return cached;
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-        });
-      })
-  );
+  // All other requests (manifests, main.dart.js, flutter_bootstrap): Native fetch without SW interference
 });
 
 // 4. Helper to format rich notifications for all order states
