@@ -171,36 +171,63 @@
       return granted;
     };
 
-    window.setWebBusiness = async function(businessId, userId) {
-      if (!window.OneSignal) return null;
-      try {
-        await window.OneSignal.login(businessId);
-        if (businessId) {
-          await window.OneSignal.User.addTag('business_id', businessId);
-        }
-        if (userId) {
-          await window.OneSignal.User.addTag('user_id', userId);
-        }
-        var pid = window.OneSignal.User?.pushSubscription?.id;
-        if (pid) {
-          localStorage.setItem('kubo_player_id', pid);
-        }
-        return pid || null;
-      } catch (e) {
-        console.error('[OneSignal] setWebBusiness error:', e);
-        return null;
-      }
+    window.setWebBusiness = function(businessId, userId) {
+      return new Promise(function(resolve) {
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        window.OneSignalDeferred.push(async function(OneSignal) {
+          try {
+            if (!OneSignal || typeof OneSignal.login !== 'function') {
+              resolve(null);
+              return;
+            }
+            if (businessId) {
+              try {
+                await OneSignal.login(businessId);
+              } catch (loginErr) {
+                console.warn('[OneSignal] login notice:', loginErr);
+              }
+              if (OneSignal.User && typeof OneSignal.User.addTag === 'function') {
+                try {
+                  await OneSignal.User.addTag('business_id', businessId);
+                } catch (_) {}
+              }
+            }
+            if (userId && OneSignal.User && typeof OneSignal.User.addTag === 'function') {
+              try {
+                await OneSignal.User.addTag('user_id', userId);
+              } catch (_) {}
+            }
+            var pid = OneSignal.User?.pushSubscription?.id;
+            if (pid) {
+              localStorage.setItem('kubo_player_id', pid);
+            }
+            resolve(pid || null);
+          } catch (e) {
+            console.warn('[OneSignal] setWebBusiness notice:', e);
+            resolve(null);
+          }
+        });
+      });
     };
 
-    window.clearWebBusiness = async function() {
-      if (!window.OneSignal) return;
-      try {
-        await window.OneSignal.logout();
-        await window.OneSignal.User.removeTag('business_id');
-        await window.OneSignal.User.removeTag('user_id');
-      } catch (e) {
-        console.error('[OneSignal] clearWebBusiness error:', e);
-      }
+    window.clearWebBusiness = function() {
+      return new Promise(function(resolve) {
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        window.OneSignalDeferred.push(async function(OneSignal) {
+          try {
+            if (OneSignal && typeof OneSignal.logout === 'function') {
+              await OneSignal.logout();
+            }
+            if (OneSignal && OneSignal.User && typeof OneSignal.User.removeTag === 'function') {
+              await OneSignal.User.removeTag('business_id');
+              await OneSignal.User.removeTag('user_id');
+            }
+          } catch (e) {
+            console.warn('[OneSignal] clearWebBusiness notice:', e);
+          }
+          resolve();
+        });
+      });
     };
   </script>
 </head>
