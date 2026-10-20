@@ -30571,7 +30571,8 @@ auX:function auX(a){this.a=a},
 auY:function auY(a){this.a=a},
 auZ:function auZ(a,b){this.a=a
 this.b=b},
-av_:function av_(a){this.a=a},
+av_:function av_(a,b){this.a=a
+this.b=b},
 avi:function avi(){},
 av9:function av9(){},
 ava:function ava(){},
@@ -108897,7 +108898,7 @@ g4=o.pop()
 c8=A.Z(g4)
 A.bc().$1("Primary order_details insert note ("+A.i(c8)+"), trying without business_id/notes...")
 p=84
-f1=A.a0(new A.ac(h8,new A.av_(c5),i),d)
+f1=A.a0(new A.ac(h8,new A.av_(c5,h0),i),d)
 c9=f1
 i=$.aY().b
 i===$&&A.b()
@@ -110390,6 +110391,7 @@ $S:213}
 A.av_.prototype={
 $1(a){var s,r="product_id",q="quantity",p="selected_modifiers",o=A.C(t.N,t.z)
 J.aQ(o,"order_id",this.a.a)
+J.aQ(o,"business_id",this.b)
 s=J.a8(a)
 J.aQ(o,r,s.h(a,r))
 J.aQ(o,q,s.h(a,q))
