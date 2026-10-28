@@ -3,12 +3,12 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 
-const RESOURCES = {"flutter_bootstrap.js": "73907a9abac7463c81580bcd8775f402",
+const RESOURCES = {"flutter_bootstrap.js": "b58342e283ec45905d54bf5659c4207e",
 "version.json": "ac6a1957bac0e511280a526af9ac22b3",
 "index.html": "ed728044db62e327daca96b5f2e463a4",
 "/": "ed728044db62e327daca96b5f2e463a4",
 "OneSignalSDKWorker.js": "0db4cab75dea682fcc6c686c7ba07fea",
-"main.dart.js": "39b013705bdf59ce541ee42a1fa0df5f",
+"main.dart.js": "475a5f9f8750b042203e1c49ec4a825e",
 "flutter.js": "83d881c1dbb6d6bcd6b42e274605b69c",
 "favicon.png": "c0311dadfcb8521c2d6295bbd9b0f56b",
 "icons/Icon-192.png": "19edc1ac7b22628ac325c6db9de57499",
@@ -25,7 +25,7 @@ const RESOURCES = {"flutter_bootstrap.js": "73907a9abac7463c81580bcd8775f402",
 "assets/packages/flutter_pos_printer_platform_image_3_sdt/resources/capabilities.json": "b65abddfd828b29b21a561053b4d3883",
 "assets/shaders/ink_sparkle.frag": "ecc85a2e95f5e9f53123dcaf8cb9b6ce",
 "assets/AssetManifest.bin": "92d580fdb970ff3fc1cf88767f844060",
-"assets/fonts/MaterialIcons-Regular.otf": "d7fdfe704537cbe00a1c5ee3bd2b1bea",
+"assets/fonts/MaterialIcons-Regular.otf": "6db487909e5b07a89b546958fbb6158d",
 "assets/assets/images/logo_dark.png": "0080ca217c0faa7f656e28ad56ec596d",
 "assets/assets/images/logo.png": "0080ca217c0faa7f656e28ad56ec596d",
 "assets/assets/images/icon_512.png": "30f8c77d983535c95ea994bd89227e21",
